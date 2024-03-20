@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
 
 use hashring::DefaultHashBuilder;
@@ -12,7 +12,7 @@ pub struct HashRing {
     /// The version of the hashring
     version: u64,
     /// The hashring data
-    inner: Arc<hashring::HashRing<Slot, DefaultHashBuilder>>,
+    inner: Arc<Mutex<hashring::HashRing<Slot, DefaultHashBuilder>>>,
 }
 
 impl Debug for HashRing {
@@ -23,10 +23,14 @@ impl Debug for HashRing {
 
 impl HashRing {
     /// Create a new hashring
-    pub fn new() -> Self {
+    pub fn new(slots: Vec<Slot>) -> Self {
+        // Init hashring with slots
+        let mut ring = hashring::HashRing::<Slot>::new();
+        ring.batch_add(slots);
+
         Self {
             version: 0,
-            inner: Arc::new(hashring::HashRing::<Slot, DefaultHashBuilder>::new()),
+            inner: Arc::new(Mutex::new(ring)),
         }
     }
 
@@ -35,8 +39,14 @@ impl HashRing {
         self.version
     }
 
-    /// Get the inner hashring
-    pub fn inner(&self) -> Arc<hashring::HashRing<Slot, DefaultHashBuilder>> {
-        self.inner.clone()
+    /// Get the slot by key
+    pub fn get_slot(&self, key: &str) -> Option<Slot> {
+        // Lock the hashring
+        let inner = self.inner.lock().unwrap();
+
+        // Get the slot by key
+        inner.get(&key).map(|node| node.clone())
     }
+
+    
 }

@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{sync::{Arc, Mutex}};
+
+/// Default slot size
+const SLOT_SIZE: u64 = 1024;
 
 /// Slot
 /// 
@@ -37,6 +40,16 @@ impl Slot {
     pub fn is_migrating(&self) -> bool {
         self.is_migrating
     }
+
+    /// Set the is_migrating
+    pub fn set_migrating(&mut self, is_migrating: bool) {
+        self.is_migrating = is_migrating;
+    }
+
+    /// Set the backend node id
+    pub fn set_backend_node_id(&mut self, backend_node_id: u64) {
+        self.backend_node_id = backend_node_id;
+    }
 }
 
 /// Slot mapping
@@ -45,24 +58,39 @@ impl Slot {
 #[derive(Debug)]
 pub struct SlotMapping {
     /// The slot mapping
-    inner: Arc<HashMap<u64, Slot>>,
+    inner: Arc<Mutex<Vec<Slot>>>,
 }
 
 impl SlotMapping {
     /// Create a new slot mapping
-    pub fn new() -> Self {
+    pub fn default() -> Self {
+        // Create a slots mapping with SLOT_SIZE
+        let slots = (0..SLOT_SIZE)
+            .map(|id| Slot::new(id, 0))
+            .collect::<Vec<Slot>>();
+
+        // Try to load mapping from meta data
+        // TODO: load from meta data
+
         Self {
-            inner: Arc::new(HashMap::new()),
+            inner: Arc::new(Mutex::new(slots)),
         }
     }
 
     /// Get the slot mapping
-    pub fn inner(&self) -> Arc<HashMap<u64, Slot>> {
-        self.inner.clone()
+    pub fn inner(&self) -> Vec<Slot> {
+        self.inner.lock().unwrap().clone()
     }
 
-    /// Set the slot mapping
-    pub fn set_inner(&mut self, inner: HashMap<u64, Slot>) {
-        self.inner = Arc::new(inner);
+    /// Get the slot by id
+    pub fn get_slot(&self, id: u64) -> Option<Slot> {
+        let slots = self.inner.lock().unwrap();
+        slots.get(id as usize).map(|slot| slot.clone())
+    }
+
+    /// Get the available slot
+    pub fn available_slot(&self) -> Vec<Slot> {
+        let slots = self.inner.lock().unwrap();
+        slots.iter().filter(|slot| !slot.is_migrating()).cloned().collect()
     }
 }

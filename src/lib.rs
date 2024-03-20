@@ -72,6 +72,11 @@
     clippy::similar_names, // Allow similar names, due to the existence of uid and gid
 )]
 
+use anyhow::Ok;
+use client::ETCDClient;
+use config::Config;
+use manager::CacheProxyManager;
+
 /// The proxy cache config
 pub mod config;
 
@@ -89,3 +94,50 @@ pub mod client;
 
 /// Slot hashring node
 pub mod node;
+
+/// The file cache
+pub mod file_cache;
+
+/// RPC
+pub mod rpc;
+
+/// Proxy cache server
+pub async fn start_cache_proxy(slot_size: usize, meta_type_string: &str, meta_endpoints: Vec<String>, time_period: usize, rpc_ip: String, rpc_port: u16) -> anyhow::Result<()> {
+    // load config
+    let config = Config::new(
+        slot_size,
+        meta_type_string,
+        meta_endpoints,
+        time_period,
+        rpc_ip,
+        rpc_port,
+    );
+    
+    match config.meta_type {
+        config::MetaType::ETCD => {
+            // start topology manager
+            let manager = CacheProxyManager::<ETCDClient>::new(config);
+
+            // Start timer worker to fetch metadata
+            let manager_worker = tokio::task::spawn(
+                async move {
+                    manager.start().await.unwrap_or_else(|e| {
+                        panic!("Manager error: {:?}", e);
+                    })
+                }
+            );
+
+            manager_worker
+                .await
+                .unwrap_or_else(|e| {
+                    panic!("Manager worker error: {:?}", e);
+                });
+        }
+        config::MetaType::Redis => {
+            // start redis client
+            unimplemented!()
+        }
+    }
+
+    Ok(())
+}
