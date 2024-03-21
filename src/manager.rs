@@ -3,9 +3,9 @@ use std::{fmt::Debug, usize};
 use anyhow::Ok;
 use tokio::{select, time};
 
-use crate::{client::{self, MetaClient}, config::Config, node::NodeList, ring::HashRing, rpc::server::RPCServer, slot::{self, SlotMapping}};
+use crate::{client::{self, MetaClient}, config::Config, node::NodeList, ring::HashRing, rpc::server::RPCServer, slot::SlotMapping};
 
-use tracing::{debug, error, info, warn};
+use tracing::warn;
 
 /// Cache proxy manager
 ///
@@ -59,16 +59,18 @@ where
         &self.client
     }
 
+    /// Get free slot
+    #[allow(dead_code)]
     pub fn allocate_free_slot(&self) -> anyhow::Result<()> {
         // Get available slot mapping and node list
         let slot_mapping = self.inner.slot_mapping();
 
         // Get available slot
-        let available_slot = slot_mapping.available_slot();
+        let _available_slot = slot_mapping.available_slot();
 
         // Update slot mapping
-        slot_mapping.update_slot(available_slot);
-        self.inner.update_slot_mapping();
+        // slot_mapping.update_slot(available_slot);
+        // self.inner.update_slot_mapping();
 
         Ok(())
     }
@@ -78,32 +80,32 @@ where
         // self.rpc_server.start().await?;
 
         // Fetch metadata from meta client
-        match self.client.read("/", true) {
-            Ok(data) => {
-                // Update metadata client
-                info!("Update metadata from meta client success");
+        // match self.client.read("/", true) {
+        //     Ok(data) => {
+        //         // Update metadata client
+        //         info!("Update metadata from meta client success");
                 
-                // Mark current node as online
-                self.register_node();
+        //         // Mark current node as online
+        //         self.register_node();
                 
-                // TODO: convert data to slot mapping and node list
+        //         // TODO: convert data to slot mapping and node list
 
-                // init topology
-                self.inner.init(data.slot_mapping, data.node_list);
+        //         // init topology
+        //         self.inner.init(data.slot_mapping, data.node_list);
 
-                // Get available slot mapping and node list
-                self.inner.allocate_free_slot();
+        //         // Get available slot mapping and node list
+        //         self.inner.allocate_free_slot();
 
-                // Update to slotmapping to meta client
-                self.client.update("/", data);
-            }
-            Err(e) => {
-                warn!("Update metadata from meta client failed: {:?}", e);
-            }
-        }
+        //         // Update to slotmapping to meta client
+        //         self.client.update("/", data);
+        //     }
+        //     Err(e) => {
+        //         warn!("Update metadata from meta client failed: {:?}", e);
+        //     }
+        // }
 
         // Start timer worker to fetch metadata
-        let mut metadata_interval = time::interval(time::Duration::from_secs(self.time_period as u64));
+        let mut metadata_interval = time::interval(time::Duration::from_secs(self.inner.time_period as u64));
         loop {
             select! {
                 _ = metadata_interval.tick() => {
@@ -117,83 +119,87 @@ where
         }
     }
 
+    /// Rebalancing
+    #[allow(dead_code)]
     pub async fn rebalancing(&self) -> anyhow::Result<()> {
         // Request balancing lock
-        let lock = self.client.lock("/");
+        // let lock = self.client.lock("/");
 
         // Get available slot mapping and node list
         let slot_mapping = self.inner.slot_mapping();
-        let node_list = self.inner.nodes();
+        let _node_list = self.inner.nodes();
 
         // Get available slot
-        let available_slot = slot_mapping.available_slot();
+        let _available_slot = slot_mapping.available_slot();
 
         // Update slot mapping
-        slot_mapping.update_slot(available_slot);
-        self.inner.update_slot_mapping();
+        // slot_mapping.update_slot(available_slot);
+        // self.inner.update_slot_mapping();
 
         // TODO: rebalancing slot mapping
 
         // Update to slotmapping to meta client
-        self.client.update("/", data);
+        // self.client.update("/", data);
 
         Ok(())
     }
 
     /// Current node online
+    #[allow(dead_code)]
     fn register_node(&self) -> anyhow::Result<()> {
         // update current node info to meta client
-        let data = b"127.0.0.1"; // Mock data
+        let _data = b"127.0.0.1"; // Mock data
 
         // Register node to meta client
-        match self.client.create("/", data) {
-            Ok(_) => {
-                // Update metadata client
-                info!("Update metadata from meta client success");
+        // match self.client.create("/", data) {
+        //     Ok(_) => {
+        //         // Update metadata client
+        //         info!("Update metadata from meta client success");
                 
-                // self.inner.init(slot_mapping, node_list);
-            }
-            Err(e) => {
-                warn!("Update metadata from meta client failed: {:?}", e);
-            }
-        }
+        //         // self.inner.init(slot_mapping, node_list);
+        //     }
+        //     Err(e) => {
+        //         warn!("Update metadata from meta client failed: {:?}", e);
+        //     }
+        // }
 
         Ok(())
     }
 
     /// Current node offline
+    #[allow(dead_code)]
     fn unregister_node(&self) -> anyhow::Result<()> {
         // update current node info to meta client
-        match self.client.delete("/") {
-            Ok(_) => {
-                // Update metadata client
-                info!("Update metadata from meta client success");
+        // match self.client.delete("/") {
+        //     Ok(_) => {
+        //         // Update metadata client
+        //         info!("Update metadata from meta client success");
                 
-                // self.inner.init(slot_mapping, node_list);
-            }
-            Err(e) => {
-                warn!("Update metadata from meta client failed: {:?}", e);
-            }
-        }
+        //         // self.inner.init(slot_mapping, node_list);
+        //     }
+        //     Err(e) => {
+        //         warn!("Update metadata from meta client failed: {:?}", e);
+        //     }
+        // }
 
         Err(anyhow::anyhow!("Unregister node failed"))
     }
 
     async fn update_metadata(&self) -> anyhow::Result<()> {
         // Fetch metadata from meta client
-        match self.client.read("/", true) {
-            Ok(_data) => {
-                // Update metadata client
-                info!("Update metadata from meta client success");
+        // match self.client.read("/", true) {
+        //     Ok(_data) => {
+        //         // Update metadata client
+        //         info!("Update metadata from meta client success");
                 
-                // TODO: convert data to slot mapping and node list
-                // self.inner.update_slot_mapping();
-                // self.inner.update_node_list();
-            }
-            Err(e) => {
-                warn!("Update metadata from meta client failed: {:?}", e);
-            }
-        }
+        //         // TODO: convert data to slot mapping and node list
+        //         // self.inner.update_slot_mapping();
+        //         // self.inner.update_node_list();
+        //     }
+        //     Err(e) => {
+        //         warn!("Update metadata from meta client failed: {:?}", e);
+        //     }
+        // }
 
         warn!("Update metadata from meta client failed");
         Ok(())

@@ -101,6 +101,9 @@ pub mod file_cache;
 /// RPC
 pub mod rpc;
 
+/// Hash Ring
+pub mod hash_ring;
+
 /// Proxy cache server
 pub async fn start_cache_proxy(slot_size: usize, meta_type_string: &str, meta_endpoints: Vec<String>, time_period: usize, rpc_ip: String, rpc_port: u16) -> anyhow::Result<()> {
     // load config
